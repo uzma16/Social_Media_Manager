@@ -14,7 +14,7 @@ load_dotenv()
 # Initialize Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash",
-    api_key="AIzaSyCUdGlXbW8-oq5I3QemsDERPhNvO5VL7zs"
+    api_key=""
 )
 
 
