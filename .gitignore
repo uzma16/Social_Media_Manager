@@ -1,0 +1,67 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Environment variables and secret files
+.env
+.env.*
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Test cache and coverage reports
+.coverage
+htmlcov/
+.tox/
+.nox/
+.cache/
+.pytest_cache/
+
+# FastAPI auto-generated OpenAPI docs (optional, only if generated to file)
+openapi.json
+
+# mypy, Pyre, pytype
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+
+# PyInstaller
+dist/
+build/
+*.spec
+
+# IDE and editor folders
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Database files (e.g., SQLite)
+*.db
+*.sqlite3
+
+# Static and media files (if dynamically generated)
+staticfiles/
+media/
+
+# Local deployment artifacts
+instance/

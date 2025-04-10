@@ -1,6 +1,6 @@
 import os
 from crewai import Agent, Task, Crew
-from crewai_tools import tools  # Import tool decorator from crewai_tools
+from crewai.tools import tool  # Import tool decorator from crewai_tools
 from openai import OpenAI
 from config.database import get_db_connection
 import json
@@ -20,10 +20,11 @@ llm = ChatGoogleGenerativeAI(
 
 
 # Define Tools using @tool decorator
-@tools
+# Define your tools with @tool (singular)
+@tool
 def store_inputs_tool(brand_guidelines: dict, goals: str, target_audience: dict, platforms: dict, logos: list, fonts: list, templates: list, past_data: object) -> str:
     """Store user inputs in the database and filesystem."""
-    db = get_db_connection()
+    db = get_db_connection()  # Assuming this function is defined elsewhere
     with db.cursor() as cursor:
         cursor.execute("""
             INSERT INTO setups (brand_guidelines, goals, target_audience, platforms)
@@ -46,7 +47,7 @@ def store_inputs_tool(brand_guidelines: dict, goals: str, target_audience: dict,
             shutil.copyfileobj(past_data.file, f)
     return "Inputs stored successfully"
 
-@tools("ParseGuidelinesTool")
+@tool
 def parse_guidelines_tool(guidelines: dict) -> dict:
     """Parse brand guidelines into a structured profile using NLP."""
     nlp = pipeline("text-classification", model="distilbert-base-uncased")
@@ -62,7 +63,7 @@ def parse_guidelines_tool(guidelines: dict) -> dict:
         "dos_donts": guidelines["dos_donts"]
     }
 
-@tools("ValidateInputsTool")
+@tool
 def validate_inputs_tool(brand_guidelines: dict, goals: str, target_audience: dict, platforms: dict) -> str:
     """Validate completeness of user inputs."""
     missing = []
@@ -78,7 +79,7 @@ def validate_inputs_tool(brand_guidelines: dict, goals: str, target_audience: di
         raise ValueError(f"Missing required fields: {', '.join(missing)}")
     return "Inputs validated successfully"
 
-@tools("GenerateStrategyTool")
+@tool
 def generate_strategy_tool(brand_guidelines: dict, goals: str, target_audience: dict, platforms: dict) -> str:
     """Generate an initial content strategy using OpenAI."""
     openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
