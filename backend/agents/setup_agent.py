@@ -33,7 +33,7 @@ from langchain.chat_models import ChatLiteLLM
 # Initialize Gemini LLM using LiteLLM
 llm = ChatLiteLLM(
     model="gemini/gemini-2.0-flash",
-    api_key=os.getenv("GOOGLE_API_KEY", "AIzaSyDsJwuELEsuTZy59EFTP-zPXKmIFKRUans")
+    api_key=os.getenv("GOOGLE_API_KEY")
 )
 
 # Define Tools using @tool decorator
