@@ -125,11 +125,14 @@ def content_generator_tool(post_details: str) -> str:
 def content_generator_agent():
     return Agent(
         role="Social Media Content Creator",
-        goal="Generate platform-specific social media content based on post details",
+        goal="Generate platform-specific social media content based on post details, post should be of high-quality, engaging, and SEO-optimized blog posts for given platform based on specified topics.",
         backstory=dedent("""
             A skilled content specialist with expertise in crafting professional, engaging social media posts
             that adhere to brand guidelines and resonate with targeted audiences. Proficient in creating
             minimalist visuals and formal, impactful captions to drive engagement.
+            As a Content Creation Agent, I am designed to assist bloggers and content creators by automating the process of writing. 
+            Leveraging advanced AI capabilities, I synthesize information from various sources to produce coherent, insightful,
+            and engaging articles that resonate with readers and adhere to SEO best practices.
         """),
         tools=[content_generator_tool],
         llm=llm,
@@ -137,44 +140,44 @@ def content_generator_agent():
     )
 
 # Task to generate content
-def content_generator_task(agent, post_details):
+def content_generator_task(agent, platform,description):
     return Task(
-        description=dedent(f"""
-    Generate a complete social media post based on the provided JSON details, including a caption,
-    hashtags, and visual description. The content must align with a professional voice, formal tone,
-    and minimalist visual style, targeting a tech-savvy audience aged 25-34. Adapt the content type
-    if needed (e.g., convert Article to Carousel for Instagram).
+            description=dedent(f"""
+                Generate engaging and platform-optimized content for {platform}. The content should be tailored to the platform's audience and adhere to its specific formatting and content guidelines.
 
-    Post Details (JSON): {post_details}
+                The content must be compelling, providing valuable insights and narratives that resonate with the audience. It should also be optimized for SEO if applicable, incorporating relevant keywords to enhance visibility and engagement.
 
-    The output should be a JSON object with caption, hashtags, visual description, and post metadata.
-    """),
-        agent=agent,
-        expected_output=dedent("""
-            A JSON string containing:
-            - caption: The post caption (e.g., under 150 chars for Instagram)
-            - hashtags: List of 5-8 relevant hashtags
-            - visual_description: Description of minimalist visual(s)
-            - platform: Platform name
-            - week: Week number
-            - day: Day of the week
-            - time: Posting time (EST)
-        """)
-    )
+                Platform: {platform}
+                Content Description/Title/Topic: {description}
+                Ensure the content strictly adheres to the specified word count range to maintain the effectiveness and appropriateness for the platform. No need to give any extra thing other than content.
+            """),
+            agent=agent,
+            expected_output=f"A fully tailored, engaging, and platform-optimized post ready for publication on {platform}, incorporating the provided descriptions and adhering to the platform's content guidelines."
+        )
 
 # Main function to run the content generator
-def text_generator(post_details: Dict) -> Dict:
+import json
+import logging
+from crewai import Crew
+
+logger = logging.getLogger(__name__)
+
+def text_generator(platform, description):
     logger.info("Starting content generation process")
     try:
-        # Convert input dict to JSON string for tool
+        # Prepare input dictionary
+        post_details = {
+            "platform": platform,
+            "description": description
+        }
         post_details_json = json.dumps(post_details)
 
-        # Instantiate agent
+        # Instantiate agent (assuming content_generator_agent is defined elsewhere)
         creator = content_generator_agent()
 
-        # Define task
-        task = content_generator_task(creator, post_details_json)
-        print("----")
+        # Define task (assuming content_generator_task is defined elsewhere)
+        task = content_generator_task(creator, platform, description)
+
         # Define Crew
         crew = Crew(
             agents=[creator],
@@ -185,27 +188,31 @@ def text_generator(post_details: Dict) -> Dict:
         # Run the crew
         result = crew.kickoff(inputs={"post_details": post_details_json})
 
-        # Parse the output (expecting JSON string)
+        # Parse the output
         content = json.loads(result.tasks_output[0].output)
         logger.info("Content generated successfully")
         return content
+
+    except json.JSONDecodeError as e:
+        logger.error("JSON parsing error: %s", str(e))
+        raise
     except Exception as e:
         logger.error("Error in content generation: %s", str(e))
         raise
 
-# Example usage
-if __name__ == "__main__":
-    example_post = {
-        "platform": "Instagram",
-        "content_type": "Article",
-        "pillar_or_campaign": "Industry Insights",
-        "description": "Share a key industry statistic with a minimalist visual.",
-        "week": 1,
-        "day": "Monday",
-        "time": "11:00 AM EST"
-    }
-    # try:
-    content = generate_post_content(example_post)
-    print(json.dumps(content, indent=2))
+# # Example usage
+# if __name__ == "__main__":
+#     example_post = {
+#         "platform": "Instagram",
+#         "content_type": "Article",
+#         "pillar_or_campaign": "Industry Insights",
+#         "description": "Share a key industry statistic with a minimalist visual.",
+#         "week": 1,
+#         "day": "Monday",
+#         "time": "11:00 AM EST"
+#     }
+#     # try:
+#     content = generate_post_content(example_post)
+#     print(json.dumps(content, indent=2))
     # except Exception as e:
     #     print(f"Failed to generate content: {e}")
