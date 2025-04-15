@@ -79,7 +79,7 @@ def format_post(platform: str, text: str) -> str:
         return text
 
 # Example Usage
-def main():
+def image_generator():
     # Sample description and platform
     description = "A team of developers working together on an innovative AI project"
     platform = "LinkedIn"  # Can be changed to Twitter/X, Instagram, etc.
@@ -107,4 +107,4 @@ def main():
     print("\nNote: To generate the actual image based on the description above, please confirm.")
 
 if __name__ == "__main__":
-    main()
+    image_generator()

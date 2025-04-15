@@ -163,7 +163,7 @@ def content_generator_task(agent, post_details):
     )
 
 # Main function to run the content generator
-def generate_post_content(post_details: Dict) -> Dict:
+def text_generator(post_details: Dict) -> Dict:
     logger.info("Starting content generation process")
     try:
         # Convert input dict to JSON string for tool
