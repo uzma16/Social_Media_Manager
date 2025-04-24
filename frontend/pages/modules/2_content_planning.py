@@ -262,12 +262,20 @@ def render():
                 mime="application/json",
                 key="json_download"
             )
-
-    # Replace switch_page with session state navigation
-    if st.button("⬅️ Back to Setup", key="back_button"):
-        st.session_state.page = "Setup"
-        st.rerun()
+    # Navigation buttons in same row
+    st.markdown("---")
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        # Replace switch_page with session state navigation
+        if st.button("⬅️ Back to Setup", key="back_button"):
+            st.session_state.page = "Setup"
+            st.rerun()
+    with col_nav2:
+        if st.button("➡️ Continue to Platform Credentials", key="continue_button"):
+            st.session_state.page = "Last Page"
+            st.rerun()
         
+    
     # Instructions
     st.sidebar.header("Instructions")
     st.sidebar.markdown("""
