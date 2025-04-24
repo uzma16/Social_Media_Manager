@@ -27,6 +27,7 @@ llm = ChatLiteLLM(
 )
 
 class ContentStrategyInput(BaseModel):
+    email: str
     strategy: str
     
 # Tool to parse and schedule content
@@ -117,7 +118,7 @@ def scheduler_task(agent, strategy_text):
     )
 
 # Main function to run the scheduler
-def generate_content_schedule(strategy_text: str) -> Dict:
+def generate_content_schedule(email: str, strategy_text: str) -> Dict:
     logger.info("Starting content scheduling process")
     try:
         # Instantiate agent

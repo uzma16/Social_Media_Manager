@@ -60,15 +60,39 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# No custom navigation needed; Streamlit handles it via pages/
-st.write("Select a page from the sidebar to begin.")
-
 # Initialize session state
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'email' not in st.session_state:
+    st.session_state.email = ""
 if 'page' not in st.session_state:
     st.session_state.page = "Setup"
-
 if 'raw_content' not in st.session_state:
     st.session_state.raw_content = ""
+
+# Function to validate email
+def validate_email(email: str) -> bool:
+    return email.strip().lower() == "uzmamansoori220@gmail.com"
+
+# Authentication form
+def render_authentication():
+    st.title("Welcome to Social Media Manager")
+    st.write("Please enter your email to access the platform.")
+    
+    with st.form(key="auth_form"):
+        email = st.text_input("Email Address", placeholder="Enter your email", key="email_input")
+        submit_button = st.form_submit_button("Authenticate")
+        
+        if submit_button:
+            if not email:
+                st.error("Please enter an email address.")
+            elif validate_email(email):
+                st.session_state.authenticated = True
+                st.session_state.email = email
+                st.success("Authentication successful! Loading the platform...")
+                st.rerun()
+            else:
+                st.error("Not authenticated: Invalid email address.")
 
 # Function to dynamically import a module
 def import_page(module_name):
@@ -79,31 +103,45 @@ def import_page(module_name):
         st.error(f"Failed to import {module_name}: {str(e)}")
         return None
 
-# Sidebar navigation
-with st.sidebar:
-    st.header("Navigation")
-    if st.button("📝 Setup", key="setup_button"):
-        st.session_state.page = "Setup"
-        st.rerun()
-    if st.button("📅 Content Planner", key="planner_button"):
-        st.session_state.page = "Content Planner"
-        st.rerun()
-    if st.button("🔑 Platform Credentials", key="credentials_button"):
-        st.session_state.page = "Last Page"
-        st.rerun()
+# Main app rendering
+def render_main_app():
+    # Sidebar navigation
+    with st.sidebar:
+        st.header("Navigation")
+        st.write(f"Logged in as: {st.session_state.email}")
+        if st.button("📝 Setup", key="setup_button"):
+            st.session_state.page = "Setup"
+            st.rerun()
+        if st.button("📅 Content Planner", key="planner_button"):
+            st.session_state.page = "Content Planner"
+            st.rerun()
+        if st.button("🔑 Platform Credentials", key="credentials_button"):
+            st.session_state.page = "Last Page"
+            st.rerun()
+        st.divider()
+        if st.button("🚪 Logout", key="logout_button"):
+            st.session_state.authenticated = False
+            st.session_state.email = ""
+            st.rerun()
 
-# Page routing
-if st.session_state.page == "Setup":
-    setup_module = import_page("1_setup")
-    if setup_module:
-        setup_module.render()
-elif st.session_state.page == "Content Planner":
-    planner_module = import_page("2_content_planning")
-    if planner_module:
-        planner_module.render()
-elif st.session_state.page == "Last Page":
-    last_page_module = import_page("3_last_page")
-    if last_page_module:
-        last_page_module.render()
+    # Page routing
+    if st.session_state.page == "Setup":
+        setup_module = import_page("1_setup")
+        if setup_module:
+            setup_module.render()
+    elif st.session_state.page == "Content Planner":
+        planner_module = import_page("2_content_planning")
+        if planner_module:
+            planner_module.render()
+    elif st.session_state.page == "Last Page":
+        last_page_module = import_page("3_last_page")
+        if last_page_module:
+            last_page_module.render()
+    else:
+        st.error("Unknown page selected")
+
+# Conditional rendering based on authentication
+if not st.session_state.authenticated:
+    render_authentication()
 else:
-    st.error("Unknown page selected")
+    render_main_app()

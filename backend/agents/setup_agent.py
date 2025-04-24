@@ -1,9 +1,8 @@
 # import os
 # from fastapi import FastAPI, HTTPException, Request
 # from crewai import Agent, Task, Crew
-# from crewai.tools import tool  # Import tool decorator from crewai_tools
+# from crewai.tools import tool  
 # from openai import OpenAI
-# # from config.database import get_db_connection
 # import json
 # import shutil
 # from textwrap import dedent
@@ -11,7 +10,8 @@
 # from langchain_google_genai import ChatGoogleGenerativeAI
 # from pydantic import BaseModel
 # from typing import Dict, List, Any, Optional
-# from typing import List
+# import litellm
+# from langchain.chat_models import ChatLiteLLM
 
 # class SetupRequest(BaseModel):
 #     brand_guidelines: Dict[str, str]
@@ -21,15 +21,6 @@
 
 # load_dotenv()
 
-# # Initialize Gemini LLM
-# # llm = ChatGoogleGenerativeAI(
-# #     model="gemini-2.0-flash",
-# #     api_key="AIzaSyDsJwuELEsuTZy59EFTP-zPXKmIFKRUans"
-# # )
-
-# import litellm
-# from langchain.chat_models import ChatLiteLLM
-
 # # Initialize Gemini LLM using LiteLLM
 # llm = ChatLiteLLM(
 #     model="gemini/gemini-2.0-flash",
@@ -37,7 +28,6 @@
 # )
 
 # # Define Tools using @tool decorator
-# # Define your tools with @tool (singular)
 # @tool
 # def store_inputs_tool(brand_guidelines: dict, goals: str, target_audience: dict, platforms: dict, logos: list, fonts: list, templates: list, past_data: object) -> str:
 #     """Store user inputs in the database and filesystem."""
@@ -322,28 +312,33 @@
 #     return result
 
 import os
-from fastapi import FastAPI, HTTPException, Request
+import sys
+
+# Add the parent directory to system path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import os
+from fastapi import HTTPException
 from crewai import Agent, Task, Crew
 from crewai.tools import tool
-from pydantic import BaseModel
-from typing import Dict, List, Any, Optional
+import json
+from textwrap import dedent
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import BaseModel
+from typing import Dict, List, Any
 import litellm
 from langchain.chat_models import ChatLiteLLM
-from textwrap import dedent
-import json
-from motor.motor_asyncio import AsyncIOMotorClient
-from datetime import datetime
-from bson import ObjectId
+from config.database import get_user_by_email, create_user, store_setup
 
-# Load environment variables
+
+class SetupRequest(BaseModel):
+    email: str
+    brand_guidelines: Dict[str, str]
+    goals: str
+    target_audience: Dict[str, str]
+    platforms: List[str]
+
 load_dotenv()
-
-# MongoDB setup
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-mongo_client = AsyncIOMotorClient(MONGO_URI)
-db = mongo_client["social_media_manager"]
 
 # Initialize Gemini LLM using LiteLLM
 llm = ChatLiteLLM(
@@ -351,102 +346,7 @@ llm = ChatLiteLLM(
     api_key=os.getenv("GOOGLE_API_KEY")
 )
 
-# Pydantic models for request validation
-class SetupRequest(BaseModel):
-    brand_guidelines: Dict[str, str]
-    goals: str
-    target_audience: Dict[str, str]
-    platforms: List[str]
-
-class ContentPlanRequest(BaseModel):
-    setup_id: str  # Reference to the setup document
-    strategy: str
-    schedule_posts: List[Dict[str, Any]]
-
-class CredentialsRequest(BaseModel):
-    setup_id: str  # Reference to the setup document
-    credentials: Optional[Dict[str, Dict[str, str]]]
-    email: Optional[str]
-
-# FastAPI app
-app = FastAPI()
-
-# MongoDB storage tool
-@tool
-async def store_inputs_tool(brand_guidelines: dict, goals: str, target_audience: dict, platforms: list) -> str:
-    """Store user inputs in MongoDB."""
-    try:
-        setup_data = {
-            "brand_guidelines": brand_guidelines,
-            "goals": goals,
-            "target_audience": target_audience,
-            "platforms": platforms,
-            "created_at": datetime.utcnow()
-        }
-        result = await db.setups.insert_one(setup_data)
-        return str(result.inserted_id)  # Return the setup_id
-    except Exception as e:
-        raise Exception(f"Failed to store inputs in MongoDB: {str(e)}")
-
-@tool
-async def store_content_plan_tool(setup_id: str, strategy: str, schedule_posts: list) -> str:
-    """Store content plan in MongoDB."""
-    try:
-        content_plan_data = {
-            "setup_id": ObjectId(setup_id),
-            "strategy": strategy,
-            "schedule_posts": schedule_posts,
-            "created_at": datetime.utcnow()
-        }
-        result = await db.content_plans.insert_one(content_plan_data)
-        return str(result.inserted_id)
-    except Exception as e:
-        raise Exception(f"Failed to store content plan in MongoDB: {str(e)}")
-
-@tool
-async def store_credentials_tool(setup_id: str, credentials: Optional[dict] = None, email: Optional[str] = None) -> str:
-    """Store credentials or email in MongoDB."""
-    try:
-        credentials_data = {
-            "setup_id": ObjectId(setup_id),
-            "credentials": credentials or {},
-            "email": email,
-            "created_at": datetime.utcnow()
-        }
-        result = await db.credentials.insert_one(credentials_data)
-        return str(result.inserted_id)
-    except Exception as e:
-        raise Exception(f"Failed to store credentials in MongoDB: {str(e)}")
-
-@tool
-def parse_guidelines_tool(guidelines: dict) -> dict:
-    """Parse brand guidelines into a structured profile (placeholder for NLP)."""
-    # Note: Original NLP code is commented out as it depends on unavailable dependencies
-    return {
-        "voice": guidelines["voice"],
-        "tone": guidelines["tone"],
-        "keywords": [word for word in guidelines["voice"].split() if len(word) > 3],
-        "sentiment_score": 0.5,  # Placeholder
-        "visual_style": guidelines["visual_style"],
-        "dos_donts": guidelines["dos_donts"]
-    }
-
-@tool
-def validate_inputs_tool(brand_guidelines: dict, goals: str, target_audience: dict, platforms: list) -> str:
-    """Validate completeness of user inputs."""
-    missing = []
-    if not brand_guidelines.get("voice") or not brand_guidelines.get("tone"):
-        missing.append("Brand voice or tone")
-    if not goals:
-        missing.append("Goals")
-    if not target_audience.get("demographics"):
-        missing.append("Audience demographics")
-    if not platforms:
-        missing.append("Platforms")
-    if missing:
-        raise ValueError(f"Missing required fields: {', '.join(missing)}")
-    return "Inputs validated successfully"
-
+# Define Tools
 @tool
 def generate_strategy_tool(brand_guidelines: dict, goals: str, target_audience: dict, platforms: List[str]) -> str:
     """Generate an initial content strategy using Gemini."""
@@ -471,52 +371,7 @@ def generate_strategy_tool(brand_guidelines: dict, goals: str, target_audience: 
     response = llm.invoke(prompt)
     return response.content
 
-# Helper method for tip section
-def __tip_section():
-    return dedent("""
-        Ensure all outputs are accurate and aligned with the provided inputs.
-        Double-check data integrity and consistency before finalizing.
-    """)
-
 # Define Agents
-def storage_agent():
-    return Agent(
-        role="Data Storage Expert",
-        goal="Securely store user inputs in MongoDB",
-        backstory=dedent("""
-            A meticulous specialist in data persistence, ensuring all user-provided
-            information is safely stored for future use.
-        """),
-        tools=[store_inputs_tool, store_content_plan_tool, store_credentials_tool],
-        llm=llm,
-        verbose=True
-    )
-
-def parser_agent():
-    return Agent(
-        role="Brand Guideline Analyst",
-        goal="Analyze and distill brand guidelines into a structured profile",
-        backstory=dedent("""
-            A skilled expert in extracting key elements of brand identity to create actionable profiles.
-        """),
-        tools=[parse_guidelines_tool],
-        llm=llm,
-        verbose=True
-    )
-
-def validator_agent():
-    return Agent(
-        role="Input Validation Specialist",
-        goal="Ensure all required user inputs are complete and valid",
-        backstory=dedent("""
-            A detail-oriented checker with a keen eye for spotting missing or
-            inconsistent data, ensuring a solid foundation for the system.
-        """),
-        tools=[validate_inputs_tool],
-        llm=llm,
-        verbose=True
-    )
-
 def strategy_agent():
     return Agent(
         role="Content Strategy Creator",
@@ -531,87 +386,14 @@ def strategy_agent():
     )
 
 # Define Tasks
-def store_setup_task(agent, brand_guidelines, goals, target_audience, platforms):
-    return Task(
-        description=dedent(f"""
-            Store all user-provided setup inputs securely in MongoDB.
-            This task involves saving structured data like brand guidelines, goals,
-            target audience, and platforms in the 'setups' collection.
-
-            Brand Guidelines: {json.dumps(brand_guidelines)}
-            Goals: {goals}
-            Target Audience: {json.dumps(target_audience)}
-            Platforms: {json.dumps(platforms)}
-        """),
-        agent=agent,
-        expected_output="MongoDB document ID of the stored setup"
-    )
-
-def store_content_plan_task(agent, setup_id, strategy, schedule_posts):
-    return Task(
-        description=dedent(f"""
-            Store the content plan in MongoDB.
-            This task involves saving the strategy text and schedule posts in the 'content_plans' collection,
-            linked to the specified setup_id.
-
-            Setup ID: {setup_id}
-            Strategy: {strategy}
-            Schedule Posts: {json.dumps(schedule_posts)}
-        """),
-        agent=agent,
-        expected_output="MongoDB document ID of the stored content plan"
-    )
-
-def store_credentials_task(agent, setup_id, credentials, email):
-    return Task(
-        description=dedent(f"""
-            Store the platform credentials or email in MongoDB.
-            This task involves saving credentials or email in the 'credentials' collection,
-            linked to the specified setup_id.
-
-            Setup ID: {setup_id}
-            Credentials: {json.dumps(credentials)}
-            Email: {email}
-        """),
-        agent=agent,
-        expected_output="MongoDB document ID of the stored credentials"
-    )
-
-def parse_task(agent, brand_guidelines):
-    return Task(
-        description=dedent(f"""
-            Analyze and distill the provided brand guidelines into a structured,
-            machine-readable voice profile. This task involves extracting key
-            elements like voice, tone, keywords, sentiment, visual style, and dos/don'ts.
-
-            Brand Guidelines: {json.dumps(brand_guidelines)}
-        """),
-        agent=agent,
-        expected_output="JSON object with voice, tone, keywords, sentiment, visual style, and dos/don'ts"
-    )
-
-def validate_task(agent, brand_guidelines, goals, target_audience, platforms):
-    return Task(
-        description=dedent(f"""
-            Validate the completeness and validity of all user inputs. This task
-            involves checking for required fields such as brand voice, tone, goals,
-            audience demographics, and platforms, raising an error if any are missing.
-
-            Brand Guidelines: {json.dumps(brand_guidelines)}
-            Goals: {goals}
-            Target Audience: {json.dumps(target_audience)}
-            Platforms: {json.dumps(platforms)}
-        """),
-        agent=agent,
-        expected_output="Confirmation message: 'Inputs validated successfully' or error if missing fields"
-    )
-
 def strategy_task(agent, brand_guidelines, goals, target_audience, platforms):
     return Task(
         description=dedent(f"""
-            Develop a comprehensive social media content strategy tailored to the user’s inputs.
+            Develop a comprehensive social media content strategy tailored to the user’s inputs using Gemini.
             The strategy should be actionable, covering content pillars, content types, posting schedule,
-            engagement tactics, performance metrics, and specific campaign ideas.
+            engagement tactics, performance metrics, and specific campaign ideas. It must align with the
+            brand’s identity, goals, target audience, and selected platforms, providing clear steps for
+            execution to drive engagement and achieve objectives.
 
             Brand Guidelines: {json.dumps(brand_guidelines)}
             Goals: {goals}
@@ -630,97 +412,51 @@ def strategy_task(agent, brand_guidelines, goals, target_audience, platforms):
         """)
     )
 
-# API Endpoints
-@app.post("/process_setup")
-async def process_setup_endpoint(request: SetupRequest):
-    try:
-        # Instantiate agents
-        storage = storage_agent()
-        parser = parser_agent()
-        validator = validator_agent()
-        strategist = strategy_agent()
+async def process_setup(email: str, brand_guidelines: Dict[str, str], goals: str, target_audience: Dict[str, str], platforms: List[str]):
+    # Check or create user
+    user = get_user_by_email(email)
+    if not user:
+        user = create_user(email)
+    user_uuid = user["uuid"]
 
-        # Define tasks
-        tasks = [
-            validate_task(validator, request.brand_guidelines, request.goals, request.target_audience, request.platforms),
-            store_setup_task(storage, request.brand_guidelines, request.goals, request.target_audience, request.platforms),
-            parse_task(parser, request.brand_guidelines),
-            strategy_task(strategist, request.brand_guidelines, request.goals, request.target_audience, request.platforms)
-        ]
+    # Instantiate agent and task
+    strategist = strategy_agent()
+    task = strategy_task(strategist, brand_guidelines, goals, target_audience, platforms)
 
-        # Define Crew
-        setup_crew = Crew(
-            agents=[storage, parser, validator, strategist],
-            tasks=tasks,
-            verbose=True
-        )
+    # Define Crew
+    setup_crew = Crew(
+        agents=[strategist],
+        tasks=[task],
+        verbose=True
+    )
 
-        # Kick off the crew process
-        result = setup_crew.kickoff()
+    # Run the crew
+    result = setup_crew.kickoff()
+    content_strategy = result if isinstance(result, str) else result.raw
 
-        # Extract setup_id from store_setup_task output
-        setup_id = result.tasks_output[1].raw  # Assuming store_setup_task is the second task
+    # Store setup in MongoDB
+    setup_data = {
+        "brand_guidelines": brand_guidelines,
+        "goals": goals,
+        "target_audience": target_audience,
+        "platforms": platforms
+    }
+    setup_id = store_setup(user_uuid, email, setup_data, content_strategy)
 
-        return {
-            "setup_id": setup_id,
-            "brand_voice_profile": result.tasks_output[2].raw,
-            "content_strategy": result.tasks_output[3].raw
+    return {
+        "result": {
+            "raw": content_strategy,
+            "setup_id": setup_id
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing setup: {str(e)}")
+    }
 
-@app.post("/content_planner")
-async def process_content_plan_endpoint(request: ContentPlanRequest):
-    try:
-        # Validate setup_id exists
-        setup = await db.setups.find_one({"_id": ObjectId(request.setup_id)})
-        if not setup:
-            raise HTTPException(status_code=404, detail="Setup not found")
-
-        # Instantiate storage agent
-        storage = storage_agent()
-
-        # Define task to store content plan
-        task = store_content_plan_task(storage, request.setup_id, request.strategy, request.schedule_posts)
-
-        # Define Crew
-        content_crew = Crew(
-            agents=[storage],
-            tasks=[task],
-            verbose=True
-        )
-
-        # Kick off the crew process
-        result = content_crew.kickoff()
-
-        return {"content_plan_id": result.tasks_output[0].raw}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing content plan: {str(e)}")
-
-@app.post("/credentials")
-async def process_credentials_endpoint(request: CredentialsRequest):
-    try:
-        # Validate setup_id exists
-        setup = await db.setups.find_one({"_id": ObjectId(request.setup_id)})
-        if not setup:
-            raise HTTPException(status_code=404, detail="Setup not found")
-
-        # Instantiate storage agent
-        storage = storage_agent()
-
-        # Define task to store credentials
-        task = store_credentials_task(storage, request.setup_id, request.credentials, request.email)
-
-        # Define Crew
-        credentials_crew = Crew(
-            agents=[storage],
-            tasks=[task],
-            verbose=True
-        )
-
-        # Kick off the crew process
-        result = credentials_crew.kickoff()
-
-        return {"credentials_id": result.tasks_output[0].raw}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing credentials: {str(e)}")
+async def process_setup_endpoint(request: SetupRequest):
+    print("Received request data:", request)
+    result = await process_setup(
+        email=request.email,
+        brand_guidelines=request.brand_guidelines,
+        goals=request.goals,
+        target_audience=request.target_audience,
+        platforms=request.platforms
+    )
+    return result
