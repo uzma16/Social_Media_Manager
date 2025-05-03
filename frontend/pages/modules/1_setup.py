@@ -1,412 +1,269 @@
-# import streamlit as st
-# import json
-# import requests
-# from typing import Dict, Any
-# from streamlit_extras.switch_page_button import switch_page
-
-# def display_api_response(response_data):
-#     try:
-#         st.subheader("🎯 Generated Strategy")
-#         # Create an expandable section for the strategy
-#         with st.expander("View Strategy", expanded=True):
-#             # Extract the raw content from the response
-#             raw_content = response_data.get("result", {}).get("raw", "")
-#             st.write("Raw response data:", raw_content)
-
-#         # Add a download button for the complete report
-#         st.download_button(
-#             label="📥 Download Complete Report",
-#             data=json.dumps(response_data, indent=2),
-#             file_name="social_media_strategy.json",
-#             mime="application/json",
-#         )
-    
-#     except Exception as e:
-#         st.error(f"Error displaying response: {str(e)}")
-#         st.write("Raw response data:", response_data)
-
-#     # return raw_content
-
-# def submit_setup(setup_data: Dict[str, Any]) -> requests.Response:
-#     API_URL = "http://localhost:8000"
-#     try:
-#         response = requests.post(
-#             f"{API_URL}/process_setup",  # Note the underscore here
-#             json=setup_data,
-#             headers={"Content-Type": "application/json"}
-#         )
-#         response.raise_for_status()
-#         return response
-#     except requests.exceptions.RequestException as e:
-#         st.error(f"API Error: {str(e)}")
-#         raise
-
-
-# def render():
-#     # Initialize session state for storing API response
-#     if 'api_response' not in st.session_state:
-#         st.session_state.api_response = None
-
-#     st.title("Step 1: User Input & Setup")
-#     st.write("Provide your brand details to set up the social media manager.")
-
-
-#     # Form for user inputs
-#     with st.form(key="setup_form"):
-#         # Brand Guidelines
-#         st.subheader("Brand Guidelines")
-#         voice = st.text_input(
-#             "Brand Voice (e.g., professional, witty)", 
-#             placeholder="Enter your brand's voice characteristics"
-#         )
-#         tone = st.text_input(
-#             "Tone (e.g., formal, casual)", 
-#             placeholder="Enter your brand's tone"
-#         )
-#         visual_style = st.text_area(
-#             "Visual Style (e.g., minimalist, bold)", 
-#             placeholder="Describe your brand's visual style"
-#         )
-#         dos_donts = st.text_area(
-#             "Dos and Don'ts (e.g., avoid politics)", 
-#             placeholder="List your brand's dos and don'ts"
-#         )
-
-#         # Goals
-#         st.subheader("Goals")
-#         goals = st.text_area(
-#             "Specific Goals (e.g., increase engagement by 20%)", 
-#             placeholder="Enter your social media goals"
-#         )
-        
-#         # Brand Assets
-#         st.subheader("Brand Assets")
-#         colors = st.text_input(
-#             "Brand Colors (e.g., #FF5733, #C70039)", 
-#             placeholder="Enter your brand colors (hex codes preferred)"
-#         )
-
-#         # Target Audience
-#         st.subheader("Target Audience")
-#         demographics = st.text_area(
-#             "Demographics (e.g., age 25-34, female)", 
-#             placeholder="Describe your target audience demographics"
-#         )
-#         psychographics = st.text_area(
-#             "Psychographics (e.g., tech-savvy, eco-conscious)", 
-#             placeholder="Describe your audience's interests and values"
-#         )
-#         behaviors = st.text_area(
-#             "Behaviors (e.g., active mornings)", 
-#             placeholder="Describe your audience's typical behaviors"
-#         )
-
-#         # Platforms
-#         st.subheader("Social Media Platforms")
-#         platforms = st.multiselect(
-#             "Select Platforms",
-#             options=["Instagram", "Twitter", "LinkedIn", "TikTok", "Facebook"],
-#             help="Choose the platforms you want to focus on"
-#         )
-#         priorities = st.text_area(
-#             "Platform Priorities (e.g., Instagram 70%)", 
-#             placeholder="Specify the priority level for each platform"
-#         )
-
-#         # Submit button
-#         submit_button = st.form_submit_button(
-#             label="Submit Setup",
-#             help="Click to submit your setup information"
-#         )
-
-#     # Handle form submission
-#     if submit_button:
-#         # Validate required fields
-#         if not voice or not tone or not goals or not platforms:
-#             st.error("Please fill in all required fields: Brand Voice, Tone, Goals, and at least one Platform.")
-#         else:
-#             # Prepare data for API
-#             setup_data = {
-#                 "brand_guidelines": {
-#                     "voice": voice,
-#                     "tone": tone,
-#                     "visual_style": visual_style or "",
-#                     "dos_donts": dos_donts or ""
-#                 },
-#                 "goals": goals,
-#                 "target_audience": {
-#                     "demographics": demographics or "",
-#                     "psychographics": psychographics or "",
-#                     "behaviors": behaviors or ""
-#                 },
-#                 "platforms": platforms
-#             }
-
-#             try:
-#                 # Show loading spinner with custom message
-#                 with st.spinner("🤖 AI is analyzing your brand and creating your strategy..."):
-#                     response = submit_setup(setup_data)
-#                     st.session_state.api_response = response.json()
-                
-#                 # Display success message
-#                 st.success("✨ Setup completed successfully! Here's your personalized strategy:")
-                
-#                 # Display the API response
-#                 display_api_response(st.session_state.api_response)
-#             except Exception as e:
-#                 st.error("⚠️ Error during setup")
-#                 with st.expander("View Error Details"):
-#                     st.write(f"Error: {str(e)}")
-#                     if hasattr(e, 'response'):
-#                         st.code(e.response.content.decode())
-#                 if st.button("🔄 Try Again"):
-#                     st.session_state.api_response = None
-#                     st.rerun()
-                
-#                 # Add navigation buttons
-#     col1, col2, col3 = st.columns([1, 1, 1])
-#     with col1:
-#         if st.button("📝 Edit Setup"):
-#             st.session_state.api_response = None
-#             st.rerun()
-#     with col2:
-#         if st.button("💾 Save Strategy"):
-#             # Add functionality to save the strategy
-#             st.toast("Strategy saved successfully!")
-#     with col3:
-#         # Navigation button to switch to Content Planner with data
-#         if st.button("➡️ Continue to Content Planning", key="navigate_button"):
-#             # Store raw_content in session state
-#             raw_content = st.session_state.api_response.get("result", {}).get("raw", "") if st.session_state.api_response else ""
-#             st.session_state.raw_content = raw_content
-#             st.session_state.page = "Content Planner"
-#             st.rerun()
-        
-    
-#     # Sidebar with instructions and tips
-#     with st.sidebar:
-#         st.header("Setup Instructions")
-#         st.markdown("""
-#         1. Fill in all required fields (marked with *)
-#         2. Be as specific as possible in your descriptions
-#         3. Choose your target platforms carefully
-#         4. Review your inputs before submitting
-#         """)
-        
-#         st.header("Tips")
-#         st.info("""
-#         💡 Your brand voice should align with your target audience's preferences.
-        
-#         💡 Be specific with your goals - make them measurable when possible.
-        
-#         💡 Consider your resources when selecting platforms to focus on.
-#         """)
-
-#         # Add help contact
-#         st.divider()
-#         st.markdown("Need help? [Contact Support](mailto:support@example.com)")
-
-
 import streamlit as st
-import json
 import requests
-from typing import Dict, Any
-
-def display_api_response(response_data):
-    try:
-        st.subheader("🎯 Generated Strategy")
-        # Create an expandable section for the strategy
-        with st.expander("View Strategy", expanded=True):
-            # Extract the raw content from the response
-            raw_content = response_data.get("result", {}).get("raw", "")
-            st.write("Raw response data:", raw_content)
-
-        # Add a download button for the complete report
-        st.download_button(
-            label="📥 Download Complete Report",
-            data=json.dumps(response_data, indent=2),
-            file_name="social_media_strategy.json",
-            mime="application/json",
-        )
-    
-    except Exception as e:
-        st.error(f"Error displaying response: {str(e)}")
-        st.write("Raw response data:", response_data)
-
-def submit_setup(setup_data: Dict[str, Any]) -> requests.Response:
-    API_URL = "http://localhost:8000"
-    try:
-        # Add authenticated user's email to the setup data
-        setup_data["email"] = st.session_state.email
-        response = requests.post(
-            f"{API_URL}/process_setup",
-            json=setup_data,
-            headers={"Content-Type": "application/json"}
-        )
-        response.raise_for_status()
-        return response
-    except requests.exceptions.RequestException as e:
-        st.error(f"API Error: {str(e)}")
-        raise
+import json
+from utils.session_manager import save_session, update_progress
+from config import API_BASE_URL
 
 def render():
-    # Initialize session state for storing API response
-    if 'api_response' not in st.session_state:
-        st.session_state.api_response = None
-
-    st.title("Step 1: User Input & Setup")
-    st.write("Provide your brand details to set up the social media manager.")
-
-    # Form for user inputs
-    with st.form(key="setup_form"):
-        # Brand Guidelines
-        st.subheader("Brand Guidelines")
-        voice = st.text_input(
-            "Brand Voice (e.g., professional, witty)", 
-            placeholder="Enter your brand's voice characteristics"
-        )
-        tone = st.text_input(
-            "Tone (e.g., formal, casual)", 
-            placeholder="Enter your brand's tone"
-        )
-        visual_style = st.text_area(
-            "Visual Style (e.g., minimalist, bold)", 
-            placeholder="Describe your brand's visual style"
-        )
-        dos_donts = st.text_area(
-            "Dos and Don'ts (e.g., avoid politics)", 
-            placeholder="List your brand's dos and don'ts"
-        )
-
-        # Goals
-        st.subheader("Goals")
-        goals = st.text_area(
-            "Specific Goals (e.g., increase engagement by 20%)", 
-            placeholder="Enter your social media goals"
-        )
+    st.title("Brand Setup")
+    st.write("Let's set up your brand profile to generate tailored content.")
+    
+    # Check if setup is already completed
+    if st.session_state.setup_completed and st.session_state.setup_id:
+        st.success("✅ Setup already completed!")
         
-        # Brand Assets
-        st.subheader("Brand Assets")
-        colors = st.text_input(
-            "Brand Colors (e.g., #FF5733, #C70039)", 
-            placeholder="Enter your brand colors (hex codes preferred)"
-        )
-
-        # Target Audience
+        # Display the existing strategy
+        if st.session_state.raw_content:
+            st.subheader("Your Content Strategy")
+            st.write(st.session_state.raw_content)
+        
+        # Option to redo setup
+        if st.button("Redo Setup"):
+            # Reset setup-related session state
+            st.session_state.setup_completed = False
+            st.session_state.setup_id = None
+            st.session_state.brand_guidelines = {}
+            st.session_state.goals = ""
+            st.session_state.target_audience = {}
+            st.session_state.platforms = []
+            st.session_state.api_response = None
+            st.session_state.raw_content = ""
+            save_session()
+            st.rerun()
+            
+        # Navigation button
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col3:
+            if st.button("➡️ Continue to Content Planning", key="navigate_button"):
+                st.session_state.page = "Content Planner"
+                save_session()
+                st.rerun()
+        
+        return
+    
+    # Initialize progress tracking
+    update_progress("setup", 0.1)
+    
+    # Setup form
+    with st.form(key="setup_form"):
+        st.subheader("Brand Guidelines")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            brand_name = st.text_input("Brand Name", 
+                                      value=st.session_state.brand_guidelines.get("brand_name", ""),
+                                      placeholder="e.g., Acme Inc.")
+            brand_voice = st.text_input("Brand Voice", 
+                                       value=st.session_state.brand_guidelines.get("brand_voice", ""),
+                                       placeholder="e.g., Professional, Friendly, Innovative")
+        
+        with col2:
+            industry = st.text_input("Industry", 
+                                    value=st.session_state.brand_guidelines.get("industry", ""),
+                                    placeholder="e.g., Technology, Fashion, Healthcare")
+            key_values = st.text_input("Key Values", 
+                                      value=st.session_state.brand_guidelines.get("key_values", ""),
+                                      placeholder="e.g., Sustainability, Innovation, Quality")
+        
+        update_progress("setup", 0.3)
+        
+        st.subheader("Goals")
+        goals = st.text_area("What are your social media goals?", 
+                            value=st.session_state.goals,
+                            placeholder="e.g., Increase brand awareness, Generate leads, Build community",
+                            height=100)
+        
+        update_progress("setup", 0.5)
+        
         st.subheader("Target Audience")
-        demographics = st.text_area(
-            "Demographics (e.g., age 25-34, female)", 
-            placeholder="Describe your target audience demographics"
-        )
-        psychographics = st.text_area(
-            "Psychographics (e.g., tech-savvy, eco-conscious)", 
-            placeholder="Describe your audience's interests and values"
-        )
-        behaviors = st.text_area(
-            "Behaviors (e.g., active mornings)", 
-            placeholder="Describe your audience's typical behaviors"
-        )
-
-        # Platforms
-        st.subheader("Social Media Platforms")
-        platforms = st.multiselect(
-            "Select Platforms",
-            options=["Instagram", "Twitter", "LinkedIn", "TikTok", "Facebook"],
-            help="Choose the platforms you want to focus on"
-        )
-        priorities = st.text_area(
-            "Platform Priorities (e.g., Instagram 70%)", 
-            placeholder="Specify the priority level for each platform"
-        )
-
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            age_range = st.text_input("Age Range", 
+                                     value=st.session_state.target_audience.get("age_range", ""),
+                                     placeholder="e.g., 25-34")
+            interests = st.text_input("Interests", 
+                                     value=st.session_state.target_audience.get("interests", ""),
+                                     placeholder="e.g., Technology, Travel, Fitness")
+        
+        with col2:
+            location = st.text_input("Location", 
+                                    value=st.session_state.target_audience.get("location", ""),
+                                    placeholder="e.g., United States, Global")
+            pain_points = st.text_input("Pain Points", 
+                                       value=st.session_state.target_audience.get("pain_points", ""),
+                                       placeholder="e.g., Lack of time, Budget constraints")
+        
+        update_progress("setup", 0.7)
+        
+        st.subheader("Platforms")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        platforms = st.session_state.platforms or []
+        
+        with col1:
+            if st.checkbox("Instagram", value="Instagram" in platforms):
+                if "Instagram" not in platforms:
+                    platforms.append("Instagram")
+            else:
+                if "Instagram" in platforms:
+                    platforms.remove("Instagram")
+                    
+            if st.checkbox("LinkedIn", value="LinkedIn" in platforms):
+                if "LinkedIn" not in platforms:
+                    platforms.append("LinkedIn")
+            else:
+                if "LinkedIn" in platforms:
+                    platforms.remove("LinkedIn")
+        
+        with col2:
+            if st.checkbox("Twitter/X", value="Twitter" in platforms):
+                if "Twitter" not in platforms:
+                    platforms.append("Twitter")
+            else:
+                if "Twitter" in platforms:
+                    platforms.remove("Twitter")
+                    
+            if st.checkbox("Facebook", value="Facebook" in platforms):
+                if "Facebook" not in platforms:
+                    platforms.append("Facebook")
+            else:
+                if "Facebook" in platforms:
+                    platforms.remove("Facebook")
+        
+        with col3:
+            if st.checkbox("TikTok", value="TikTok" in platforms):
+                if "TikTok" not in platforms:
+                    platforms.append("TikTok")
+            else:
+                if "TikTok" in platforms:
+                    platforms.remove("TikTok")
+                    
+            if st.checkbox("YouTube", value="YouTube" in platforms):
+                if "YouTube" not in platforms:
+                    platforms.append("YouTube")
+            else:
+                if "YouTube" in platforms:
+                    platforms.remove("YouTube")
+        
+        with col4:
+            if st.checkbox("Pinterest", value="Pinterest" in platforms):
+                if "Pinterest" not in platforms:
+                    platforms.append("Pinterest")
+            else:
+                if "Pinterest" in platforms:
+                    platforms.remove("Pinterest")
+                    
+            if st.checkbox("Other", value="Other" in platforms):
+                if "Other" not in platforms:
+                    platforms.append("Other")
+            else:
+                if "Other" in platforms:
+                    platforms.remove("Other")
+        
+        update_progress("setup", 0.9)
+        
+        # Save form data to session state
+        st.session_state.brand_guidelines = {
+            "brand_name": brand_name,
+            "brand_voice": brand_voice,
+            "industry": industry,
+            "key_values": key_values
+        }
+        st.session_state.goals = goals
+        st.session_state.target_audience = {
+            "age_range": age_range,
+            "interests": interests,
+            "location": location,
+            "pain_points": pain_points
+        }
+        st.session_state.platforms = platforms
+        
         # Submit button
-        submit_button = st.form_submit_button(
-            label="Submit Setup",
-            help="Click to submit your setup information"
-        )
-
+        submit_button = st.form_submit_button("Generate Content Strategy")
+    
     # Handle form submission
     if submit_button:
-        # Validate required fields
-        if not voice or not tone or not goals or not platforms:
-            st.error("Please fill in all required fields: Brand Voice, Tone, Goals, and at least one Platform.")
-        else:
-            # Prepare data for API
-            setup_data = {
-                "brand_guidelines": {
-                    "voice": voice,
-                    "tone": tone,
-                    "visual_style": visual_style or "",
-                    "dos_donts": dos_donts or ""
-                },
-                "goals": goals,
-                "target_audience": {
-                    "demographics": demographics or "",
-                    "psychographics": psychographics or "",
-                    "behaviors": behaviors or ""
-                },
-                "platforms": platforms
-            }
-
-            try:
-                # Show loading spinner with custom message
-                with st.spinner("🤖 AI is analyzing your brand and creating your strategy..."):
-                    response = submit_setup(setup_data)
-                    st.session_state.api_response = response.json()
-                
-                # Display success message
-                st.success("✨ Setup completed successfully! Here's your personalized strategy:")
-                
-                # Display the API response
-                display_api_response(st.session_state.api_response)
-            except Exception as e:
-                st.error("⚠️ Error during setup")
-                with st.expander("View Error Details"):
-                    st.write(f"Error: {str(e)}")
-                    if hasattr(e, 'response'):
-                        st.write(e.response.content.decode())
-                if st.button("🔄 Try Again"):
-                    st.session_state.api_response = None
-                    st.rerun()
-                
-    # Add navigation buttons
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        if st.button("📝 Edit Setup"):
-            st.session_state.api_response = None
-            st.rerun()
-    with col2:
-        if st.button("💾 Save Strategy"):
-            # Add functionality to save the strategy
-            st.toast("Strategy saved successfully!")
-    with col3:
-        # Navigation button to switch to Content Planner with data
-        if st.button("➡️ Continue to Content Planning", key="navigate_button"):
-            # Store raw_content in session state
-            raw_content = st.session_state.api_response.get("result", {}).get("raw", "") if st.session_state.api_response else ""
-            st.session_state.raw_content = raw_content
-            st.session_state.page = "Content Planner"
-            st.rerun()
-    
-    # Sidebar with instructions and tips
-    with st.sidebar:
-        st.header("Setup Instructions")
-        st.markdown("""
-        1. Fill in all required fields (marked with *)
-        2. Be as specific as possible in your descriptions
-        3. Choose your target platforms carefully
-        4. Review your inputs before submitting
-        """)
+        # Validate inputs - improved validation logic
+        missing_fields = []
         
-        st.header("Tips")
-        st.info("""
-        💡 Your brand voice should align with your target audience's preferences.
+        if not brand_name.strip():
+            missing_fields.append("Brand Name")
         
-        💡 Be specific with your goals - make them measurable when possible.
+        if not industry.strip():
+            missing_fields.append("Industry")
         
-        💡 Consider your resources when selecting platforms to focus on.
-        """)
-
-        # Add help contact
-        st.divider()
-        st.markdown("Need help? [Contact Support](mailto:support@example.com)")
+        if not goals.strip():
+            missing_fields.append("Goals")
+        
+        if not platforms:
+            missing_fields.append("at least one Platform")
+        
+        if missing_fields:
+            st.error(f"Please fill in all required fields: {', '.join(missing_fields)}.")
+            return
+        
+        # Prepare data for API
+        setup_data = {
+            "email": st.session_state.email,
+            "brand_guidelines": st.session_state.brand_guidelines,
+            "goals": st.session_state.goals,
+            "target_audience": st.session_state.target_audience,
+            "platforms": st.session_state.platforms
+        }
+        
+        try:
+            # Show spinner during API call
+            with st.spinner("🤖 AI is analyzing your brand and creating your strategy..."):
+                update_progress("setup", 0.95)
+                
+                # Make API request
+                response = requests.post(
+                    f"{API_BASE_URL}/setup",  # Changed from /process_setup to /setup
+                    json=setup_data,
+                    timeout=120  # Longer timeout for AI processing
+                )
+                
+                if response.status_code == 200:
+                    response_json = response.json()
+                    st.session_state.api_response = response_json
+                    
+                    # Store setup_id correctly - check different possible locations
+                    if "result" in response_json and "setup_id" in response_json["result"]:
+                        st.session_state.setup_id = response_json["result"]["setup_id"]
+                    elif "setup_id" in response_json:
+                        st.session_state.setup_id = response_json["setup_id"]
+                    else:
+                        # If setup_id is not in the expected location, search for it
+                        import json
+                        response_str = json.dumps(response_json)
+                        if "setup_id" in response_str:
+                            st.write("Debug: setup_id found in response but not in expected location")
+                            st.write(f"Debug: Full response: {response_json}")
+                    
+                    # Debug output
+                    st.write(f"Debug: Stored setup_id: {st.session_state.setup_id}")
+                    
+                    st.session_state.raw_content = response_json.get("result", {}).get("raw", "")
+                    
+                    # Mark setup as completed
+                    st.session_state.setup_completed = True
+                    update_progress("setup", 1.0)
+                    
+                    # Save session
+                    save_session()
+                    
+                    st.success("✨ Setup completed successfully! Here's your personalized strategy:")
+                    st.write(st.session_state.raw_content)
+                    
+                    # Navigation button
+                    col1, col2, col3 = st.columns([1, 1, 1])
+                    with col3:
+                        if st.button("➡️ Continue to Content Planning", key="navigate_button"):
+                            st.session_state.page = "Content Planner"
+                            save_session()
+                            st.rerun()
+                else:
+                    st.error(f"Error: {response.status_code} - {response.text}")
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")

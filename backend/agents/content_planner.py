@@ -1,4 +1,8 @@
 import json
+import logging
+import traceback
+from datetime import datetime, timedelta
+from fastapi import HTTPException
 from crewai import Agent, Task, Crew
 # from crewai_tools import tool
 from textwrap import dedent
@@ -7,9 +11,11 @@ from dotenv import load_dotenv
 import os
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict
+from typing import List, Dict, Optional
 from crewai.tools import tool 
 from pydantic import BaseModel
+from config.database import store_schedule
+import uuid
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -23,12 +29,15 @@ from langchain.chat_models import ChatLiteLLM
 # Initialize Gemini LLM using LiteLLM
 llm = ChatLiteLLM(
     model="gemini/gemini-2.0-flash",
-    api_key=os.getenv("GOOGLE_API_KEY")
+    api_key="AIzaSyCUdGlXbW8-oq5I3QemsDERPhNvO5VL7zs"
 )
 
 class ContentStrategyInput(BaseModel):
     email: str
     strategy: str
+    time_period: Optional[str] = "2 Weeks"
+    post_frequency: Optional[str] = "3 times per week"
+    special_instructions: Optional[str] = None
     
 # Tool to parse and schedule content
 @tool
@@ -118,9 +127,14 @@ def scheduler_task(agent, strategy_text):
     )
 
 # Main function to run the scheduler
-def generate_content_schedule(email: str, strategy_text: str) -> Dict:
-    logger.info("Starting content scheduling process")
+async def generate_content_schedule(request: ContentStrategyInput) -> Dict:
+    """Generate a content schedule based on the provided strategy."""
+    logger.info(f"Starting content scheduling process for email: {request.email}")
     try:
+        # Extract data from request
+        email = request.email
+        strategy_text = request.strategy
+        
         # Instantiate agent
         scheduler = scheduler_agent()
 
@@ -149,6 +163,18 @@ def generate_content_schedule(email: str, strategy_text: str) -> Dict:
         elif not isinstance(schedule, list):
             raise ValueError("Expected a list of posts, but got a different structure")
 
+        # Generate a UUID for the user if not provided
+        user_uuid = str(uuid.uuid4())  # You might want to pass this as a parameter instead
+        
+        # Store the schedule in the database
+        schedule_id = store_schedule(
+            user_uuid=user_uuid,
+            email=email,
+            strategy_text=strategy_text,
+            posts=schedule
+        )
+        
+        logger.info(f"Content schedule stored in database with ID: {schedule_id}")
         logger.info("Content schedule generated successfully with %d posts", len(schedule))
         return schedule
     except Exception as e:
